@@ -57,7 +57,14 @@
    "Lebanon County",
    "Ohio",
    "South Carolina",
-   "Mansfield"
+   "Mansfield",
+   "West Richland",
+   "Washington state",
+   "Benton County",
+   "Tri-Cities",
+   "Michigan",
+   "Montgomery County",
+   "Delaware County"
   ],
   "home_region_terms": [
    "Quakertown",
@@ -104,15 +111,15 @@
    },
    {
     "label": "Google News: Bucks data centers",
-    "section": "county",
-    "require": "flag",
-    "url": "https://news.google.com/rss/search?q=%22Bucks+County%22+%28%22data+center%22+OR+%22data+centers%22+OR+datacenter+OR+hyperscale%29+when%3A3d&hl=en-US&gl=US&ceid=US:en"
+    "section": "local",
+    "require": "local",
+    "url": "https://news.google.com/rss/search?q=%28Quakertown+OR+%22Richland+Township%22+OR+%22Upper+Bucks%22+OR+Milford+OR+Haycock+OR+Springfield%29+%22Bucks+County%22+%28%22data+center%22+OR+%22data+centers%22%29+when%3A3d&hl=en-US&gl=US&ceid=US:en"
    },
    {
     "label": "Google News: Upper Bucks data centers",
-    "section": "county",
-    "require": "flag",
-    "url": "https://news.google.com/rss/search?q=%28Quakertown+OR+Richland+OR+%22Upper+Bucks%22+OR+Milford+OR+Haycock%29+%22data+center%22+when%3A7d&hl=en-US&gl=US&ceid=US:en"
+    "section": "local",
+    "require": "local",
+    "url": "https://news.google.com/rss/search?q=%28Quakertown+OR+%22Richland+Township%22+OR+%22Upper+Bucks%22+OR+Richlandtown%29+%28%22data+center%22+OR+%22data+centers%22+OR+datacenter+OR+hyperscale%29+when%3A7d&hl=en-US&gl=US&ceid=US:en"
    },
    {
     "label": "Bucks Independence: Quakertown",
@@ -356,8 +363,17 @@
      "label": "Bad Bunny news (Puerto Rico)",
      "url": "https://news.google.com/rss/search?q=%22Bad+Bunny%22+when%3A1d&hl=es-419&gl=PR&ceid=PR:es-419"
     }
+   ],
+   "title_must": "Bad Bunny|Benito|Conejo Malo",
+   "skip_terms": [
+    "biglietti",
+    "entradas baratas",
+    "cheap tickets",
+    "tickets? (?:for sale|resale)",
+    "\\([A-Za-z0-9]{9,}\\)"
    ]
-  }
+  },
+  "dashboard_url": "https://justsumsingh.github.io/daily-brief/"
  },
  "dispatch": {
   "report_r": "eyJrIjoiZGU0YjU1ODQtY2RmMS00ZGE0LWEzZDAtMDkzZTg3MjZmYWE2IiwidCI6Ijg0ZTJlODcxLWU3ZmMtNGIwMC1hMzg3LWNlODg0MGE0ZTU4ZCJ9",
@@ -372,6 +388,11 @@
    "HAYCOCK TOWNSHIP",
    "SPRINGFIELD TOWNSHIP"
   ],
-  "ignore_types": []
+  "ignore_types": [],
+  "show_categories": [
+   "Police",
+   "EMS",
+   "Fire"
+  ]
  }
 }
