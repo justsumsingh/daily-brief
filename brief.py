@@ -71,6 +71,7 @@ POLICE_TERMS = [
 ]
 
 SECTIONS = [
+    ("spotlight", _H.get("spotlight", "⭐ Spotlight")),
     ("flag", _H.get("flag", "🚩 Flagged")),
     ("meetings", _H.get("meetings", "🏛️ Meetings")),
     ("dispatch", _H.get("dispatch", "🚨 911 Dispatches (last 24 hrs)")),
@@ -676,6 +677,63 @@ def collect_recalls(state, items, report):
             report.append((label, f"⚠️ failed ({ex.__class__.__name__})"))
 
 
+# --- Spotlight (a person/topic you follow; shown first) -----------------------
+SPOT = CFG.get("spotlight") or {}
+YT_FEED = "https://www.youtube.com/feeds/videos.xml?channel_id="
+
+
+def _youtube_channel_id(state, handle):
+    """Resolve a @handle to its channel ID once, then remember it."""
+    cache = state.setdefault("yt_ids", {})
+    if handle in cache:
+        return cache[handle]
+    r = fetch(f"https://www.youtube.com/{handle}", headers={"Accept-Language": "en-US"})
+    m = (re.search(r'<link rel="canonical" href="https://www\.youtube\.com/channel/(UC[\w-]{22})"', r.text)
+         or re.search(r'"(?:externalId|channelId)":"(UC[\w-]{22})"', r.text))
+    if not m:
+        raise ValueError("channel id not found")
+    cache[handle] = m.group(1)
+    return m.group(1)
+
+
+def collect_spotlight(state, items, report):
+    if not SPOT:
+        return
+    name = SPOT.get("name", "Spotlight")
+    # New videos
+    for handle in SPOT.get("youtube_handles", []):
+        try:
+            cid = _youtube_channel_id(state, handle)
+            n = 0
+            for title, link, _, when, _ in _feed_entries(YT_FEED + cid, SPOT.get("video_max_age_hours", 48)):
+                if _seen(state, ukey(link)):
+                    continue
+                items.append(Item(section="spotlight", title=f"▶️ New video: {title}", url=link,
+                                  source=f"YouTube {handle}", when=when))
+                n += 1
+            report.append((f"{name}: YouTube {handle}", f"{n} new"))
+        except Exception as ex:
+            report.append((f"{name}: YouTube {handle}", f"⚠️ failed ({ex.__class__.__name__})"))
+    # News, newest first, capped
+    news, keys = [], set()
+    for src in SPOT.get("news_feeds", []):
+        try:
+            for title, link, s_name, when, _ in _feed_entries(src["url"], src.get("max_age_hours", 30)):
+                k = tkey(title)
+                if k in keys or k in state["news_seen"] or ukey(link) in state["news_seen"]:
+                    continue
+                keys.add(k)
+                news.append((title, link, s_name, when))
+        except Exception as ex:
+            report.append((src.get("label", name), f"⚠️ failed ({ex.__class__.__name__})"))
+    cap = int(SPOT.get("max_news", 5))
+    for title, link, s_name, when in news:
+        _seen(state, ukey(link), tkey(title))
+    for title, link, s_name, when in news[:cap]:
+        items.append(Item(section="spotlight", title=title, url=link, source=s_name or "News", when=when))
+    report.append((f"{name}: news", f"{min(len(news), cap)} shown of {len(news)}"))
+
+
 # --- Rendering --------------------------------------------------------------
 def group(items):
     out = {k: [] for k, _ in SECTIONS}
@@ -689,15 +747,22 @@ def render_html(items, report, date_str, weather=None):
     e = html.escape
     parts = [f"""<div style="font-family:Arial,sans-serif;max-width:680px;margin:auto;color:#222">
 <h2 style="margin-bottom:4px">Local Brief — {e(date_str)}</h2>
-<div style="color:#666;font-size:13px;margin-bottom:16px">{e(CFG.get("subtitle", ""))}</div>""",
-             weather_html(weather)]
+<div style="color:#666;font-size:13px;margin-bottom:16px">{e(CFG.get("subtitle", ""))}</div>"""]
     any_items = False
-    for key, heading in SECTIONS:
+    order = SECTIONS[:1] + [("__weather__", "")] + SECTIONS[1:]
+    for key, heading in order:
+        if key == "__weather__":
+            parts.append(weather_html(weather))
+            continue
         rows = g[key]
+        if key == "spotlight" and SPOT and not rows:
+            parts.append(f'<h3 style="border-bottom:2px solid #ddd;padding-bottom:4px;margin-top:10px">{heading}</h3>'
+                         f'<p style="color:#777;font-size:13px">Nothing new since yesterday.</p>')
+            continue
         if not rows:
             continue
         any_items = True
-        bg = {"flag": "#fff4f2", "prep": "#f3f7ff", "recalls": "#fffaf0"}.get(key, "#fff")
+        bg = {"flag": "#fff4f2", "prep": "#f3f7ff", "recalls": "#fffaf0", "spotlight": "#fbf5ff"}.get(key, "#fff")
         parts.append(f'<h3 style="border-bottom:2px solid #ddd;padding-bottom:4px;margin-top:22px">{heading}</h3>')
         for it in rows:
             meta = " · ".join(x for x in [it.source, it.when] if x)
@@ -717,8 +782,15 @@ def render_html(items, report, date_str, weather=None):
 
 def render_text(items, report, date_str, weather=None):
     g = group(items)
-    lines = [f"LOCAL BRIEF — {date_str}", "", weather_text(weather)]
-    for key, heading in SECTIONS:
+    lines = [f"LOCAL BRIEF — {date_str}", ""]
+    order = SECTIONS[:1] + [("__weather__", "")] + SECTIONS[1:]
+    for key, heading in order:
+        if key == "__weather__":
+            lines.append(weather_text(weather))
+            continue
+        if key == "spotlight" and SPOT and not g[key]:
+            lines += [heading.upper(), "  Nothing new since yesterday.", ""]
+            continue
         if not g[key]:
             continue
         lines.append(heading.upper())
@@ -764,6 +836,7 @@ def main():
             return
 
     items, report = [], []
+    collect_spotlight(state, items, report)
     weather = collect_weather(report)
     collect_pages(state, items, report)
     collect_news(state, items, report)

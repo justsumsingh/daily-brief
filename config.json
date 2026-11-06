@@ -1,0 +1,377 @@
+{
+ "brief": {
+  "subtitle": "Richland Township · Quakertown 18951 · Upper Bucks · Bucks County data centers",
+  "headings": {
+   "flag": "🚩 Data Center Watch",
+   "local": "📰 Richland / Quakertown / Upper Bucks News",
+   "county": "🗺️ Bucks County",
+   "meetings": "🏛️ Meetings, Agendas & Legal Notices",
+   "newsletters": "🗞️ Township & Borough Newsletters",
+   "spotlight": "🐰 Bad Bunny"
+  },
+  "flag_terms": [
+   "data[\\s-]?cent(?:er|re)s?",
+   "datacent(?:er|re)s?",
+   "hyper[\\s-]?scale",
+   "server farms?",
+   "\\bAI campus",
+   "Ordinance\\s*(?:No\\.?\\s*)?313\\b",
+   "Tollgate"
+  ],
+  "local_context_terms": [
+   "rezon(?:e|es|ed|ing)",
+   "conditional use",
+   "\\bPPL\\b",
+   "substations?",
+   "transmission lines?",
+   "power lines?",
+   "high[\\s-]voltage",
+   "water (?:and|&) sewer capacity",
+   "sewer capacity",
+   "water capacity",
+   "water allocation",
+   "sewage facilities plan",
+   "\\bAct 537\\b"
+  ],
+  "local_terms": [
+   "Quakertown",
+   "Richland Township",
+   "Richland Twp",
+   "Richlandtown",
+   "Upper Bucks",
+   "\\b18951\\b",
+   "Trumbauersville",
+   "Milford Township",
+   "Haycock",
+   "Springfield Township",
+   "California Road",
+   "West End Blvd",
+   "Tollgate"
+  ],
+  "exclude_terms": [
+   "Cambria",
+   "Johnstown",
+   "Allegheny",
+   "Pine Creek",
+   "Richland County",
+   "Lebanon County",
+   "Ohio",
+   "South Carolina",
+   "Mansfield"
+  ],
+  "home_region_terms": [
+   "Quakertown",
+   "Upper Bucks",
+   "Bucks County",
+   "18951"
+  ],
+  "news_feeds": [
+   {
+    "label": "Google News: Richland Township",
+    "section": "local",
+    "require": "local",
+    "url": "https://news.google.com/rss/search?q=%22Richland+Township%22+Quakertown+when%3A2d&hl=en-US&gl=US&ceid=US:en"
+   },
+   {
+    "label": "Google News: Quakertown",
+    "section": "local",
+    "require": "local",
+    "url": "https://news.google.com/rss/search?q=Quakertown+PA+when%3A2d&hl=en-US&gl=US&ceid=US:en"
+   },
+   {
+    "label": "Google News: Upper Bucks",
+    "section": "local",
+    "require": "local",
+    "url": "https://news.google.com/rss/search?q=%22Upper+Bucks%22+when%3A2d&hl=en-US&gl=US&ceid=US:en"
+   },
+   {
+    "label": "Google News: 18951",
+    "section": "local",
+    "require": "local",
+    "url": "https://news.google.com/rss/search?q=%2218951%22+when%3A3d&hl=en-US&gl=US&ceid=US:en"
+   },
+   {
+    "label": "Google News: Quakertown schools",
+    "section": "local",
+    "require": "local",
+    "url": "https://news.google.com/rss/search?q=%22Quakertown+Community+School+District%22+OR+%22Quakertown+school+board%22+when%3A3d&hl=en-US&gl=US&ceid=US:en"
+   },
+   {
+    "label": "Google News: Bucks County Herald",
+    "section": "local",
+    "require": "local",
+    "url": "https://news.google.com/rss/search?q=%28Quakertown+OR+%22Richland+Township%22%29+site%3Abuckscountyherald.com+when%3A4d&hl=en-US&gl=US&ceid=US:en"
+   },
+   {
+    "label": "Google News: Bucks data centers",
+    "section": "county",
+    "require": "flag",
+    "url": "https://news.google.com/rss/search?q=%22Bucks+County%22+%28%22data+center%22+OR+%22data+centers%22+OR+datacenter+OR+hyperscale%29+when%3A3d&hl=en-US&gl=US&ceid=US:en"
+   },
+   {
+    "label": "Google News: Upper Bucks data centers",
+    "section": "county",
+    "require": "flag",
+    "url": "https://news.google.com/rss/search?q=%28Quakertown+OR+Richland+OR+%22Upper+Bucks%22+OR+Milford+OR+Haycock%29+%22data+center%22+when%3A7d&hl=en-US&gl=US&ceid=US:en"
+   },
+   {
+    "label": "Bucks Independence: Quakertown",
+    "section": "local",
+    "require": "local",
+    "url": "https://www.bucksindependence.com/tag/quakertown-pa/feed/"
+   },
+   {
+    "label": "Bucks Independence: Richland Township",
+    "section": "local",
+    "require": "local",
+    "url": "https://www.bucksindependence.com/tag/richland-township/feed/"
+   },
+   {
+    "label": "Central Bucks News: Upper Bucks",
+    "section": "local",
+    "require": "local",
+    "url": "https://centralbucksnews.com/category/upper-bucks/feed/"
+   }
+  ],
+  "watch_pages": [
+   {
+    "label": "Richland Township (official)",
+    "section": "meetings",
+    "local_doc": true,
+    "url": "https://www.richlandtownship.org/",
+    "follow": "(supervisor|planning|zoning|minute|agenda|board|meeting|commission|notice|news|newsletter|bulletin|ordinance|hearing|preservation)",
+    "links": "\\.pdf(\\?|$)",
+    "max_pages": 15
+   },
+   {
+    "label": "Quakertown Borough (official)",
+    "section": "meetings",
+    "local_doc": true,
+    "url": "https://www.quakertown.org/",
+    "follow": "(council|agenda|minute|meeting|planning|zoning|notice|news|newsletter|quarterly|hearing)",
+    "links": "(\\.pdf(\\?|$)|showpublisheddocument|ShowDocument|AgendaCenter/ViewFile)",
+    "max_pages": 12
+   },
+   {
+    "label": "Quakertown Area Planning Committee",
+    "section": "meetings",
+    "local_doc": true,
+    "url": "https://connects.buckscounty.gov/qapc",
+    "links": "\\.pdf(\\?|$)",
+    "max_pages": 1
+   },
+   {
+    "label": "Quakertown Borough police blotter",
+    "section": "police",
+    "local_doc": false,
+    "url": "https://www.quakertown.org/government/police/police-blotter",
+    "links": "police-blotter/(\\d{4}/)?\\d{4}-[a-z]+",
+    "max_pages": 1
+   },
+   {
+    "label": "Richland Twp Police (CRIMEWATCH)",
+    "section": "police",
+    "local_doc": false,
+    "url": "https://bucks.crimewatchpa.com/richlandtwppd/34826",
+    "links": "(/34826/(cases|arrests|post|news|alerts)/[^/?#]+|crimewatch\\.net/l/\\d+)",
+    "max_pages": 1
+   },
+   {
+    "label": "Richland Twp Police alerts (CRIMEWATCH)",
+    "section": "police",
+    "local_doc": false,
+    "url": "https://bucks.crimewatchpa.com/richlandtwppd/34826/content/crime",
+    "links": "(/34826/(cases|arrests|post|news|alerts)/[^/?#]+|crimewatch\\.net/l/\\d+)",
+    "max_pages": 1
+   },
+   {
+    "label": "QCSD school board (BoardBook)",
+    "section": "meetings",
+    "local_doc": true,
+    "title_prefix": "School board",
+    "url": "https://manuals.boardbook.org/Public/Organization/4015",
+    "links": "/Public/(Agenda|Minutes)/4015\\?meeting=\\d+",
+    "max_pages": 1
+   },
+   {
+    "label": "Bucks County Law Reporter (legal notices)",
+    "section": "meetings",
+    "local_doc": false,
+    "title_prefix": "Legal notices",
+    "flag_window": 600,
+    "pdf_max_pages": 200,
+    "url": "https://www.palegalads.org/legal-ads/bucks-county",
+    "follow": "/legal-ads/bucks-county/Bucks-County-Law-Reporter",
+    "links": "/journals/pdf/[^#?]+\\.pdf",
+    "max_pages": 4,
+    "only_if_flagged": true
+   }
+  ],
+  "weather": {
+   "label": "Quakertown",
+   "lat": 40.4418,
+   "lon": -75.3416
+  },
+  "prep": {
+   "max_trend": 5,
+   "official_feeds": [
+    {
+     "label": "PJM grid alerts",
+     "icon": "⚡",
+     "url": "https://insidelines.pjm.com/feed/",
+     "max_age_hours": 48,
+     "title_must": "alert|emergency|conservation|load management|maximum generation|max gen|demand response|cold weather|hot weather"
+    },
+    {
+     "label": "PJM grid emergencies (news)",
+     "icon": "⚡",
+     "max_age_hours": 48,
+     "url": "https://news.google.com/rss/search?q=PJM+%28%22emergency%22+OR+%22conservation%22+OR+%22rolling+blackouts%22+OR+%22load+management%22%29+when%3A2d&hl=en-US&gl=US&ceid=US:en",
+     "title_must": "PJM|grid|blackout|power"
+    },
+    {
+     "label": "CDC health alerts",
+     "icon": "🩺",
+     "max_age_hours": 72,
+     "url": "https://news.google.com/rss/search?q=%28%22Health+Alert+Network%22+OR+%22CDC+health+advisory%22+OR+%22CDC+issues+health+alert%22%29+when%3A3d&hl=en-US&gl=US&ceid=US:en",
+     "title_must": "health alert|health advisory|HAN\\b|CDC"
+    },
+    {
+     "label": "PA health alerts",
+     "icon": "🩺",
+     "max_age_hours": 72,
+     "url": "https://news.google.com/rss/search?q=%22Pennsylvania+Department+of+Health%22+%28alert+OR+outbreak+OR+advisory+OR+warning%29+when%3A3d&hl=en-US&gl=US&ceid=US:en",
+     "title_must": "alert|outbreak|advisory|warning|case"
+    }
+   ],
+   "space_weather_url": "https://services.swpc.noaa.gov/products/alerts.json",
+   "space_weather_min_g": 3,
+   "trend_feeds": [
+    {
+     "label": "Supply chain",
+     "icon": "📦",
+     "url": "https://news.google.com/rss/search?q=%22supply+chain%22+%28disruption+OR+shortage+OR+delays%29+when%3A1d&hl=en-US&gl=US&ceid=US:en"
+    },
+    {
+     "label": "Shortages",
+     "icon": "📦",
+     "url": "https://news.google.com/rss/search?q=shortage+%28food+OR+fuel+OR+diesel+OR+propane+OR+medicine+OR+%22baby+formula%22+OR+eggs%29+United+States+when%3A1d&hl=en-US&gl=US&ceid=US:en"
+    },
+    {
+     "label": "Strikes & transport",
+     "icon": "🚢",
+     "url": "https://news.google.com/rss/search?q=%28%22port+strike%22+OR+%22rail+strike%22+OR+%22dockworkers%22+OR+%22trucker+strike%22+OR+%22shipping+disruption%22%29+when%3A2d&hl=en-US&gl=US&ceid=US:en"
+    },
+    {
+     "label": "Food prices & bird flu",
+     "icon": "🥚",
+     "url": "https://news.google.com/rss/search?q=%28%22bird+flu%22+OR+%22avian+flu%22+OR+%22egg+prices%22+OR+%22food+prices%22+OR+%22beef+prices%22%29+when%3A2d&hl=en-US&gl=US&ceid=US:en"
+    },
+    {
+     "label": "Energy prices",
+     "icon": "⛽",
+     "url": "https://news.google.com/rss/search?q=%28%22gas+prices%22+OR+%22heating+oil%22+OR+%22propane+prices%22+OR+%22diesel+prices%22+OR+%22natural+gas+prices%22%29+%28spike+OR+surge+OR+jump+OR+shortage%29+when%3A2d&hl=en-US&gl=US&ceid=US:en"
+    },
+    {
+     "label": "Global chokepoints",
+     "icon": "🌐",
+     "url": "https://news.google.com/rss/search?q=%28%22Strait+of+Hormuz%22+OR+%22Red+Sea%22+OR+%22Panama+Canal%22+OR+%22Suez+Canal%22+OR+%22export+ban%22+OR+tariffs%29+%28shipping+OR+supply+OR+shortage%29+when%3A2d&hl=en-US&gl=US&ceid=US:en"
+    },
+    {
+     "label": "Pennsylvania emergencies",
+     "icon": "🚨",
+     "url": "https://news.google.com/rss/search?q=Pennsylvania+%28%22disaster+declaration%22+OR+%22emergency+declaration%22+OR+%22boil+water%22+OR+%22state+of+emergency%22%29+when%3A2d&hl=en-US&gl=US&ceid=US:en"
+    }
+   ],
+   "trend_terms": [
+    "shortages?",
+    "disruptions?",
+    "strikes?",
+    "walkout",
+    "bird flu|avian flu|H5N1",
+    "price (?:spike|surge|jump)s?|prices? (?:soar|surge|spike|jump)",
+    "rationing",
+    "panic buying|stockpil\\w*",
+    "export ban",
+    "recall",
+    "outbreak",
+    "emergency declaration|state of emergency|disaster declaration",
+    "boil water",
+    "blackouts?|outages?",
+    "port|rail|shipping|freight",
+    "tariffs?",
+    "drought|crop failure|harvest"
+   ],
+   "skip_terms": [
+    "^how to\\b",
+    "\\bbest\\b.*\\b(deals|buys)\\b",
+    "\\bopinion\\b",
+    "\\bquiz\\b",
+    "\\bhoroscope\\b",
+    "stock (?:picks|to buy)"
+   ],
+   "trusted_sources": [
+    "Reuters",
+    "Associated Press",
+    "AP News",
+    "Bloomberg",
+    "Wall Street Journal",
+    "NPR",
+    "CNBC",
+    "Supply Chain Dive",
+    "FreightWaves",
+    "Financial Times",
+    "PBS",
+    "Pennsylvania Capital-Star",
+    "WHYY"
+   ],
+   "recalls": {
+    "lookback_days": 10,
+    "area_terms": [
+     "nationwide",
+     "\\bPA\\b",
+     "Pennsylvania",
+     "all states",
+     "U\\.?S\\.? wide"
+    ],
+    "fsis_state_ids": [
+     63,
+     557
+    ]
+   }
+  },
+  "spotlight": {
+   "name": "Bad Bunny",
+   "youtube_handles": [
+    "@badbunnypr"
+   ],
+   "video_max_age_hours": 48,
+   "max_news": 5,
+   "news_feeds": [
+    {
+     "label": "Bad Bunny news",
+     "url": "https://news.google.com/rss/search?q=%22Bad+Bunny%22+when%3A1d&hl=en-US&gl=US&ceid=US:en"
+    },
+    {
+     "label": "Bad Bunny news (Puerto Rico)",
+     "url": "https://news.google.com/rss/search?q=%22Bad+Bunny%22+when%3A1d&hl=es-419&gl=PR&ceid=PR:es-419"
+    }
+   ]
+  }
+ },
+ "dispatch": {
+  "report_r": "eyJrIjoiZGU0YjU1ODQtY2RmMS00ZGE0LWEzZDAtMDkzZTg3MjZmYWE2IiwidCI6Ijg0ZTJlODcxLWU3ZmMtNGIwMC1hMzg3LWNlODg0MGE0ZTU4ZCJ9",
+  "entity": "uVw_New_PFE_Data",
+  "public_page": "https://www.buckscounty.gov/2150/911-Incident-Report",
+  "local_munis": [
+   "RICHLAND TOWNSHIP",
+   "QUAKERTOWN BOROUGH",
+   "RICHLANDTOWN BOROUGH",
+   "TRUMBAUERSVILLE BOROUGH",
+   "MILFORD TOWNSHIP",
+   "HAYCOCK TOWNSHIP",
+   "SPRINGFIELD TOWNSHIP"
+  ],
+  "ignore_types": []
+ }
+}
