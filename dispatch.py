@@ -13,6 +13,7 @@ Usage:
 """
 import base64
 import json
+import os
 import sys
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -29,10 +30,10 @@ IGNORE_TYPES = _CFG.get("ignore_types", [])  # call types to skip, case-insensit
 API = "https://wabi-us-gov-virginia-api.analysis.usgovcloudapi.net/public/reports"
 
 STATE_FILE = "dispatches.json"
-KEEP_DAYS = 3
+KEEP_DAYS = 31  # the dashboard can look back 30 days
 TZ = ZoneInfo("America/New_York")
 
-CATEGORY = {"PD": "Police/Traffic", "ED": "EMS", "FD": "Fire"}
+CATEGORY = {"PD": "Police", "ED": "EMS", "FD": "Fire"}
 
 # Only block-level location fields — the same detail the county shows publicly.
 # External_Lat/Lon are the block-level points the county plots on its own public map.
@@ -155,6 +156,10 @@ def run():
         state["incidents"] = pruned
         save_state(STATE_FILE, state)
     log(f"{new} new local calls saved." if new else "No new local calls.")
+    out = os.environ.get("GITHUB_OUTPUT")
+    if out:  # tells the workflow whether to republish the dashboard
+        with open(out, "a") as f:
+            f.write(f"changed={'true' if new else 'false'}\n")
 
 
 def main():

@@ -70,18 +70,19 @@ POLICE_TERMS = [
     r"overdose", r"emergency", r"rescue", r"trooper", r"sentenced", r"homicide",
 ]
 
-SECTIONS = [
+SECTIONS = [  # email + dashboard order (key points and weather follow the spotlight)
     ("spotlight", _H.get("spotlight", "⭐ Spotlight")),
     ("flag", _H.get("flag", "🚩 Flagged")),
-    ("meetings", _H.get("meetings", "🏛️ Meetings")),
-    ("dispatch", _H.get("dispatch", "🚨 911 Dispatches (last 24 hrs)")),
-    ("prep", _H.get("prep", "🧭 Preparedness Watch")),
-    ("recalls", _H.get("recalls", "⚠️ Serious Recalls")),
-    ("newsletters", _H.get("newsletters", "🗞️ Newsletters")),
-    ("police", _H.get("police", "🚓 Police & Emergency")),
     ("local", _H.get("local", "📰 Local News")),
     ("county", _H.get("county", "🗺️ Region")),
+    ("meetings", _H.get("meetings", "🏛️ Meetings")),
+    ("newsletters", _H.get("newsletters", "🗞️ Newsletters")),
+    ("prep", _H.get("prep", "🧭 Preparedness Watch")),
+    ("recalls", _H.get("recalls", "⚠️ Serious Recalls")),
+    ("police", _H.get("police", "🚓 Police & Emergency")),
+    ("dispatch", _H.get("dispatch", "🚨 911 Dispatches (last 24 hrs)")),
 ]
+LAYOUT = SECTIONS[:1] + [("__keypoints__", ""), ("__weather__", "")] + SECTIONS[1:]
 
 # ---------------------------------------------------------------------------
 # Internals
@@ -128,22 +129,26 @@ def tkey(title: str) -> str:
 
 
 def flag_terms(text: str, is_local: bool) -> list:
+    """Flags only fire for your area: the item must come from a local document
+    or name one of your local places, and must not be about a same-name place elsewhere."""
+    if not (is_local or LOCAL_RE.search(text)) or (not is_local and is_excluded_place(text)):
+        return []
     hits = {m.group(0).strip().lower() for m in DC_RE.finditer(text)}
-    if is_local or LOCAL_RE.search(text):
-        hits |= {m.group(0).strip().lower() for m in CTX_RE.finditer(text)}
+    hits |= {m.group(0).strip().lower() for m in CTX_RE.finditer(text)}
     return sorted(hits)
 
 
 def flag_terms_near_local(text: str, window: int) -> list:
-    """For big county-wide documents (e.g. a weekly legal journal): data center terms
-    always count; zoning/utility terms count only within `window` characters of a
-    local place name, so a rezoning in a far-off township isn't flagged."""
-    hits = {m.group(0).strip().lower() for m in DC_RE.finditer(text)}
+    """For big county-wide documents (e.g. a weekly legal journal): a term only counts
+    within `window` characters of a local place name, so items about far-off
+    townships aren't flagged."""
+    hits = set()
     local_spans = [m.start() for m in LOCAL_RE.finditer(text)]
     if local_spans:
-        for m in CTX_RE.finditer(text):
-            if any(abs(m.start() - p) <= window for p in local_spans):
-                hits.add(m.group(0).strip().lower())
+        for rx in (DC_RE, CTX_RE):
+            for m in rx.finditer(text):
+                if any(abs(m.start() - p) <= window for p in local_spans):
+                    hits.add(m.group(0).strip().lower())
     return sorted(hits)
 
 
@@ -334,6 +339,12 @@ def collect_pages(state, items, report):
 
 # --- 911 dispatches (saved every 15 min by dispatch.py) ---------------------
 DISPATCH_FILE = "dispatches.json"
+def cat_name(c: str) -> str:
+    return "Police" if c in ("Police/Traffic", "Police") else (c or "Other")
+
+
+DISPATCH_SHOW = {cat_name(c) for c in load_config().get("dispatch", {}).get("show_categories", ["Police", "EMS", "Fire", "Other"])}
+DISPATCH_ICONS = {"Police": "🚓", "EMS": "🚑", "Fire": "🚒", "Other": "📟"}
 DISPATCH_URL = load_config().get("dispatch", {}).get("public_page", "")
 
 
@@ -349,11 +360,11 @@ def collect_dispatches(items, report):
             t = datetime.strptime(c["time"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=TZ)
         except (KeyError, ValueError):
             continue
-        if t >= since:
+        if t >= since and cat_name(c.get("category", "Other")) in DISPATCH_SHOW:
             rows.append((t, c))
     for t, c in sorted(rows, key=lambda x: x[0], reverse=True):
         items.append(Item(section="dispatch", title=f"{c['type']} — {c['location']}",
-                          url=c.get("map") or DISPATCH_URL, source=c.get("category", "911"),
+                          url=c.get("map") or DISPATCH_URL, source=cat_name(c.get("category", "Other")),
                           when=t.strftime("%a %-I:%M %p")))
     report.append(("911 dispatches", f"{len(rows)} local calls in last 24 hrs"))
 
@@ -718,7 +729,11 @@ def collect_spotlight(state, items, report):
     news, keys = [], set()
     for src in SPOT.get("news_feeds", []):
         try:
+            must = re.compile(SPOT.get("title_must", "."), re.I)
+            junk = _rx(SPOT.get("skip_terms", []))
             for title, link, s_name, when, _ in _feed_entries(src["url"], src.get("max_age_hours", 30)):
+                if not must.search(title) or junk.search(title):
+                    continue
                 k = tkey(title)
                 if k in keys or k in state["news_seen"] or ukey(link) in state["news_seen"]:
                     continue
@@ -742,68 +757,203 @@ def group(items):
     return out
 
 
+PER_SECTION = int(CFG.get("max_per_section", 5))
+NO_SNIPPET_SECTIONS = {"local", "county", "spotlight", "meetings", "newsletters", "dispatch", "police"}
+
+
+def _short(t, n=90):
+    t = " ".join(t.split())
+    return t if len(t) <= n else t[:n - 1].rstrip() + "…"
+
+
+def _repeats_title(it) -> bool:
+    """Google News 'summaries' are often just the headline again — skip those."""
+    norm = lambda x: re.sub(r"[^a-z0-9]+", "", x.lower())
+    t, sn = norm(it.title), norm(it.snippet)
+    return bool(t) and (t[:60] in sn or sn[:60] in t)
+
+
+def _by_category(rows):
+    order = ["Police", "Fire", "EMS", "Other"]
+    groups = {}
+    for r in rows:
+        groups.setdefault(r.source, []).append(r)
+    return [(c, groups[c]) for c in order if c in groups] + [(c, v) for c, v in groups.items() if c not in order]
+
+
+DISPATCH_DETAIL_MAX = 15  # per category, in the details block at the bottom
+
+
+def _dispatch_counts(rows) -> str:
+    return "  ·  ".join(f"{DISPATCH_ICONS.get(c, '📟')} {c} {len(v)}" for c, v in _by_category(rows))
+
+
+def _dispatch_html(rows) -> str:
+    e = html.escape
+    out = []
+    for cat, calls in _by_category(rows):
+        out.append(f'<div style="font-weight:bold;font-size:13px;margin:8px 0 2px">{DISPATCH_ICONS.get(cat, "📟")} {e(cat)} '
+                   f'<span style="color:#999;font-weight:normal">({len(calls)})</span></div>')
+        for c in calls[:DISPATCH_DETAIL_MAX]:
+            out.append(f'<div style="font-size:13px;margin:2px 0 2px 8px"><span style="color:#999;font-size:11px">{e(c.when)}</span> '
+                       f'<a href="{e(c.url)}" style="color:#0b57d0;text-decoration:none">{e(c.title.title())}</a></div>')
+        if len(calls) > DISPATCH_DETAIL_MAX:
+            out.append(f'<div style="font-size:12px;color:#777;margin-left:8px">+{len(calls) - DISPATCH_DETAIL_MAX} more</div>')
+    return "\n".join(out)
+
+
+def key_points(g, weather) -> list:
+    """Up to 5 one-line highlights, picked by rules (no AI): one per area, in priority order."""
+    pts = []
+    if g.get("spotlight"):
+        it = g["spotlight"][0]
+        more = f" (+{len(g['spotlight']) - 1} more)" if len(g["spotlight"]) > 1 else ""
+        pts.append(("⭐", f"{SPOT.get('name', 'Spotlight')}: {_short(it.title.replace('▶️ ', ''))}{more}", it.url))
+    if weather and weather.get("alerts"):
+        a = weather["alerts"][0]
+        pts.append(("⚠️", f"Weather alert: {a['event']}", ""))
+    elif weather and weather.get("days"):
+        d = weather["days"][0]
+        main = d["day"] or d["night"]
+        hi = f"{d['day']['temp']}°" if d["day"] else ""
+        lo = f"{d['night']['temp']}°" if d["night"] else ""
+        temps = "/".join(x for x in (hi, lo) if x)
+        pts.append(("🌤️", f"{d['name']}: {temps} {main['text']}".strip(), ""))
+    if g.get("flag"):
+        it = g["flag"][0]
+        pts.append(("🚩", f"{len(g['flag'])} flagged — {_short(it.title, 70)}", it.url))
+    if g.get("dispatch"):
+        calls = g["dispatch"]
+        cats = {}
+        for c in calls:
+            cats[c.source] = cats.get(c.source, 0) + 1
+        mix = ", ".join(f"{n} {k}" for k, n in sorted(cats.items(), key=lambda x: -x[1]))
+        pts.append(("🚨", f"{len(calls)} local 911 calls in 24 hrs ({mix})", ""))
+    urgent = [i for i in g.get("prep", []) if i.title[:1] in "⚡☀🩺"] or g.get("prep", [])
+    if urgent:
+        icon, _, rest = urgent[0].title.partition(" ")
+        if not rest or icon.isalnum():  # title has no leading icon of its own
+            icon, rest = "🧭", urgent[0].title
+        pts.append((icon, _short(rest, 85), urgent[0].url))
+    if g.get("recalls"):
+        pts.append(("⚠️", f"{len(g['recalls'])} serious recall(s) — {_short(g['recalls'][0].title, 60)}", g["recalls"][0].url))
+    if g.get("meetings") or g.get("newsletters"):
+        n = len(g.get("meetings", [])) + len(g.get("newsletters", []))
+        pts.append(("🏛️", f"{n} new meeting agenda/notice posting(s)", ""))
+    if g.get("local"):
+        pts.append(("📰", _short(g["local"][0].title), g["local"][0].url))
+    return pts[:5]
+
+
+def _sources_line(report):
+    bad = [lbl for lbl, st in report if "failed" in st]
+    ok = len(report) - len(bad)
+    return ok, bad
+
+
 def render_html(items, report, date_str, weather=None):
     g = group(items)
     e = html.escape
-    parts = [f"""<div style="font-family:Arial,sans-serif;max-width:680px;margin:auto;color:#222">
-<h2 style="margin-bottom:4px">Local Brief — {e(date_str)}</h2>
-<div style="color:#666;font-size:13px;margin-bottom:16px">{e(CFG.get("subtitle", ""))}</div>"""]
-    any_items = False
-    order = SECTIONS[:1] + [("__weather__", "")] + SECTIONS[1:]
-    for key, heading in order:
+    parts = [f"""<div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;color:#222;font-size:14px">
+<h2 style="margin:0 0 2px">Local Brief — {e(date_str)}</h2>
+<div style="color:#777;font-size:12px;margin-bottom:12px">{e(CFG.get("subtitle", ""))}</div>"""]
+    if CFG.get("dashboard_url"):
+        parts.append(f'<div style="margin:-4px 0 12px"><a href="{e(CFG["dashboard_url"])}" '
+                     f'style="display:inline-block;background:#0b57d0;color:#fff;text-decoration:none;'
+                     f'padding:7px 14px;border-radius:16px;font-size:13px">Open dashboard →</a></div>')
+
+    pts = key_points(g, weather)
+    kp_html = ""
+    if pts:
+        li = "".join(
+            f'<li style="margin:3px 0">{ic} ' + (f'<a href="{e(u)}" style="color:#222;text-decoration:none">{e(t)}</a>' if u else e(t)) + "</li>"
+            for ic, t, u in pts)
+        kp_html = (f'<div style="background:#f6f8fa;border-radius:8px;padding:10px 14px;margin:14px 0 6px">'
+                   f'<div style="font-weight:bold;margin-bottom:4px">Today\'s key points</div>'
+                   f'<ul style="margin:0;padding-left:4px;list-style:none">{li}</ul></div>')
+
+    for key, heading in LAYOUT:
+        if key == "__keypoints__":
+            parts.append(kp_html)
+            continue
         if key == "__weather__":
             parts.append(weather_html(weather))
             continue
         rows = g[key]
         if key == "spotlight" and SPOT and not rows:
-            parts.append(f'<h3 style="border-bottom:2px solid #ddd;padding-bottom:4px;margin-top:10px">{heading}</h3>'
-                         f'<p style="color:#777;font-size:13px">Nothing new since yesterday.</p>')
+            parts.append(f'<h3 style="font-size:16px;border-bottom:1px solid #ddd;padding-bottom:3px;margin:16px 0 6px">{heading}</h3>'
+                         f'<div style="color:#888;font-size:13px">Nothing new since yesterday.</div>')
             continue
         if not rows:
             continue
-        any_items = True
-        bg = {"flag": "#fff4f2", "prep": "#f3f7ff", "recalls": "#fffaf0", "spotlight": "#fbf5ff"}.get(key, "#fff")
-        parts.append(f'<h3 style="border-bottom:2px solid #ddd;padding-bottom:4px;margin-top:22px">{heading}</h3>')
-        for it in rows:
+        parts.append(f'<h3 style="font-size:16px;border-bottom:1px solid #ddd;padding-bottom:3px;margin:16px 0 6px">'
+                     f'{heading} <span style="color:#999;font-weight:normal;font-size:12px">{len(rows)}</span></h3>')
+        if key == "dispatch":
+            parts.append(f'<div style="font-size:14px;margin:4px 0;color:#555">{e(_dispatch_counts(rows))}</div>'
+                         + _dispatch_html(rows))
+            continue
+        for it in rows[:PER_SECTION]:
             meta = " · ".join(x for x in [it.source, it.when] if x)
-            flags = (f'<div style="color:#b3261e;font-size:12px;font-weight:bold">🚩 {e(", ".join(it.flags))}</div>'
-                     if it.flags else "")
-            snip = f'<div style="font-size:13px;color:#444;margin-top:2px">{e(it.snippet)}</div>' if it.snippet else ""
-            parts.append(f"""<div style="background:{bg};padding:8px 10px;margin:6px 0;border-left:3px solid {'#b3261e' if it.flags else '#ccc'}">
-{flags}<a href="{e(it.url)}" style="font-size:15px;color:#0b57d0;text-decoration:none">{e(it.title)}</a>
-<div style="font-size:12px;color:#777">{e(meta)}</div>{snip}</div>""")
-    if not any_items:
-        parts.append("<p>Quiet day — nothing new from any source.</p>")
-    parts.append('<h4 style="margin-top:28px;color:#666">Sources checked</h4><ul style="font-size:12px;color:#666">')
-    parts += [f"<li>{e(lbl)}: {e(status)}</li>" for lbl, status in report]
-    parts.append("</ul></div>")
+            border = "#b3261e" if it.flags else "#e3e3e3"
+            flag = f'<span style="color:#b3261e;font-size:11px;font-weight:bold">🚩 {e(", ".join(it.flags))}</span><br>' if it.flags else ""
+            snip = ""
+            if it.snippet and (it.flags or key not in NO_SNIPPET_SECTIONS) and not _repeats_title(it):
+                snip = f'<div style="font-size:12px;color:#555">{e(_short(it.snippet, 160))}</div>'
+            parts.append(f'<div style="border-left:3px solid {border};padding:3px 8px;margin:4px 0">{flag}'
+                         f'<a href="{e(it.url)}" style="color:#0b57d0;text-decoration:none">{e(_short(it.title, 110))}</a> '
+                         f'<span style="font-size:11px;color:#999">{e(meta)}</span>{snip}</div>')
+        extra = rows[PER_SECTION:]
+        if extra:
+            links = " · ".join(f'<a href="{e(i.url)}" style="color:#666">{e(_short(i.title, 45))}</a>' for i in extra[:8])
+            more = f" and {len(extra) - 8} more" if len(extra) > 8 else ""
+            parts.append(f'<div style="font-size:12px;color:#777;margin:2px 0 0 11px">+{len(extra)} more: {links}{more}</div>')
+
+    ok, bad = _sources_line(report)
+    status = f"{ok} sources checked OK" + (f" · ⚠️ failed: {e(', '.join(bad))}" if bad else "")
+    parts.append(f'<div style="margin-top:22px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:6px">{status}</div></div>')
     return "\n".join(parts)
 
 
 def render_text(items, report, date_str, weather=None):
     g = group(items)
     lines = [f"LOCAL BRIEF — {date_str}", ""]
-    order = SECTIONS[:1] + [("__weather__", "")] + SECTIONS[1:]
-    for key, heading in order:
+    if CFG.get("dashboard_url"):
+        lines += [f"Dashboard: {CFG['dashboard_url']}", ""]
+    pts = key_points(g, weather)
+    for key, heading in LAYOUT:
+        if key == "__keypoints__":
+            if pts:
+                lines.append("TODAY'S KEY POINTS")
+                lines += [f"  {ic} {t}" for ic, t, _ in pts]
+                lines.append("")
+            continue
         if key == "__weather__":
             lines.append(weather_text(weather))
             continue
-        if key == "spotlight" and SPOT and not g[key]:
+        rows = g[key]
+        if key == "spotlight" and SPOT and not rows:
             lines += [heading.upper(), "  Nothing new since yesterday.", ""]
             continue
-        if not g[key]:
+        if not rows:
             continue
-        lines.append(heading.upper())
-        for it in g[key]:
+        lines.append(f"{heading.upper()} ({len(rows)})")
+        if key == "dispatch":
+            lines.append(f"  {_dispatch_counts(rows)}")
+            for cat, calls in _by_category(rows):
+                lines.append(f"  {DISPATCH_ICONS.get(cat, '📟')} {cat} ({len(calls)})")
+                lines += [f"   - {c.when}  {c.title}" for c in calls[:DISPATCH_DETAIL_MAX]]
+                if len(calls) > DISPATCH_DETAIL_MAX:
+                    lines.append(f"   +{len(calls) - DISPATCH_DETAIL_MAX} more")
+            lines.append("")
+            continue
+        for it in rows[:PER_SECTION]:
             flag = f"[FLAG: {', '.join(it.flags)}] " if it.flags else ""
-            lines.append(f"- {flag}{it.title} ({it.source})\n  {it.url}")
-            if it.snippet:
-                lines.append(f"  {it.snippet}")
+            lines.append(f"- {flag}{_short(it.title, 110)} ({it.source})\n  {it.url}")
+        if len(rows) > PER_SECTION:
+            lines.append(f"  +{len(rows) - PER_SECTION} more")
         lines.append("")
-    if not items:
-        lines.append("Quiet day — nothing new.\n")
-    lines.append("Sources checked:")
-    lines += [f"  {lbl}: {status}" for lbl, status in report]
+    ok, bad = _sources_line(report)
+    lines.append(f"{ok} sources checked OK" + (f" · failed: {', '.join(bad)}" if bad else ""))
     return "\n".join(lines)
 
 
@@ -862,7 +1012,29 @@ def main():
     send_email(subject, html_body, text_body)
     state["last_sent"] = now_ny.date().isoformat()
     save_state(state)
+    save_history(items, weather, now_ny)
     log(f"Brief sent ({len(items)} items).")
+
+
+HISTORY_FILE = "history.json"
+HISTORY_DAYS = 30
+
+
+def save_history(items, weather, now_ny):
+    """Keep 30 days of brief items (encrypted) for the dashboard. 911 calls live in
+    the dispatch file, so they're not duplicated here."""
+    hist = _load_state(HISTORY_FILE, {"days": {}})
+    day = now_ny.date().isoformat()
+    g = group(items)
+    hist["days"][day] = [
+        {"section": "flag" if it.flags else it.section, "title": it.title, "url": it.url,
+         "source": it.source, "when": it.when, "flags": it.flags, "snippet": it.snippet}
+        for it in items if it.section != "dispatch"]
+    hist["latest"] = {"date": day, "weather": weather or {},
+                      "key_points": [[ic, t, u] for ic, t, u in key_points(g, weather)]}
+    cutoff = (now_ny - timedelta(days=HISTORY_DAYS)).date().isoformat()
+    hist["days"] = {d: v for d, v in hist["days"].items() if d >= cutoff}
+    _save_state(HISTORY_FILE, hist)
 
 
 if __name__ == "__main__":

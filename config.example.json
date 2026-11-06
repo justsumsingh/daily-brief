@@ -40,7 +40,8 @@
    "label": "Your town",
    "lat": 0.0,
    "lon": 0.0
-  }
+  },
+  "dashboard_url": "https://YOUR-USERNAME.github.io/YOUR-REPO/"
  },
  "dispatch": {
   "report_r": "",

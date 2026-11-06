@@ -4,3 +4,5 @@ seen.json
 dispatches.json
 brief.html
 __pycache__/
+site/
+history.json
