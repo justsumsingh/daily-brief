@@ -1,0 +1,6 @@
+# Private — never commit these
+config.json
+seen.json
+dispatches.json
+brief.html
+__pycache__/

@@ -1,0 +1,52 @@
+{
+ "brief": {
+  "subtitle": "Your area",
+  "headings": {
+   "flag": "🚩 Flagged",
+   "local": "📰 Local News",
+   "county": "🗺️ Region"
+  },
+  "flag_terms": [
+   "example keyword"
+  ],
+  "local_context_terms": [],
+  "local_terms": [
+   "Your Town"
+  ],
+  "exclude_terms": [],
+  "home_region_terms": [
+   "Your County"
+  ],
+  "news_feeds": [
+   {
+    "label": "Example feed",
+    "section": "local",
+    "require": "local",
+    "url": "https://example.com/feed/"
+   }
+  ],
+  "watch_pages": [
+   {
+    "label": "Example town site",
+    "section": "meetings",
+    "local_doc": true,
+    "url": "https://example.gov/",
+    "follow": "(agenda|minute)",
+    "links": "\\.pdf(\\?|$)",
+    "max_pages": 5
+   }
+  ],
+  "weather": {
+   "label": "Your town",
+   "lat": 0.0,
+   "lon": 0.0
+  }
+ },
+ "dispatch": {
+  "report_r": "",
+  "entity": "",
+  "public_page": "",
+  "local_munis": [],
+  "ignore_types": []
+ }
+}
