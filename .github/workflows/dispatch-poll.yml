@@ -1,0 +1,45 @@
+name: Dispatch Poller
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # every 15 minutes (GitHub may run some a few minutes late)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dispatch-poll
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install requests cryptography
+
+      - name: Check the feed
+        run: python dispatch.py
+        env:
+          BRIEF_CONFIG: ${{ secrets.BRIEF_CONFIG }}
+          STATE_KEY: ${{ secrets.STATE_KEY }}
+
+      - name: Save state (only if changed)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898699+github-actions[bot]@users.noreply.github.com"
+          if [ -f dispatches.json.enc ]; then
+            git add dispatches.json.enc
+            if ! git diff --cached --quiet; then
+              git commit -m "Update state"
+              for i in 1 2 3; do git pull --rebase -q && git push -q && break; sleep 5; done
+            fi
+          fi
