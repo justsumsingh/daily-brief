@@ -449,7 +449,7 @@ def weather_html(w) -> str:
                      f'<div style="font-size:13px">{e(main["text"])}</div>'
                      f'<div style="font-size:12px;color:#666">{f"{pop}% precip · " if pop else ""}{e(main["wind"])}</div></td>')
     label = f' — {e(w["label"])}' if w.get("label") else ""
-    parts.append(f'<h3 style="border-bottom:2px solid #ddd;padding-bottom:4px;margin-top:10px">🌤️ Weather{label}</h3>'
+    parts.append(f'<h3 style="border-bottom:2px solid #ddd;padding-bottom:4px;margin-top:10px">🌤️ Weather{label}{_dash_link("weather")}</h3>'
                  f'<table style="border-collapse:collapse;width:100%"><tr>{"".join(cells)}</tr></table>')
     return "\n".join(parts)
 
@@ -766,6 +766,15 @@ def _short(t, n=90):
     return t if len(t) <= n else t[:n - 1].rstrip() + "…"
 
 
+def _dash_link(key: str) -> str:
+    """Small 'Dashboard →' link on a section heading; opens that section on the dashboard."""
+    url = CFG.get("dashboard_url")
+    if not url:
+        return ""
+    return (f'<a href="{html.escape(url)}#{key}" style="float:right;font-size:12px;font-weight:normal;'
+            f'color:#0b57d0;text-decoration:none;margin-top:3px">Dashboard →</a>')
+
+
 def _repeats_title(it) -> bool:
     """Google News 'summaries' are often just the headline again — skip those."""
     norm = lambda x: re.sub(r"[^a-z0-9]+", "", x.lower())
@@ -881,13 +890,13 @@ def render_html(items, report, date_str, weather=None):
             continue
         rows = g[key]
         if key == "spotlight" and SPOT and not rows:
-            parts.append(f'<h3 style="font-size:16px;border-bottom:1px solid #ddd;padding-bottom:3px;margin:16px 0 6px">{heading}</h3>'
+            parts.append(f'<h3 style="font-size:16px;border-bottom:1px solid #ddd;padding-bottom:3px;margin:16px 0 6px">{heading}{_dash_link(key)}</h3>'
                          f'<div style="color:#888;font-size:13px">Nothing new since yesterday.</div>')
             continue
         if not rows:
             continue
         parts.append(f'<h3 style="font-size:16px;border-bottom:1px solid #ddd;padding-bottom:3px;margin:16px 0 6px">'
-                     f'{heading} <span style="color:#999;font-weight:normal;font-size:12px">{len(rows)}</span></h3>')
+                     f'{heading} <span style="color:#999;font-weight:normal;font-size:12px">{len(rows)}</span>{_dash_link(key)}</h3>')
         if key == "dispatch":
             parts.append(f'<div style="font-size:14px;margin:4px 0;color:#555">{e(_dispatch_counts(rows))}</div>'
                          + _dispatch_html(rows))

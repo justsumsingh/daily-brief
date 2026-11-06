@@ -115,7 +115,7 @@ document.getElementById("pw").onkeydown=e=>{if(e.key==="Enter")document.getEleme
 const saved=store.get();if(saved)tryPw(saved,true);
 
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let D,range=7,q="";
+let D,range=7,q="",openKey=decodeURIComponent((location.hash||"").slice(1));
 function render(data){D=data;const app=document.getElementById("app");app.hidden=false;draw();}
 function daysBack(n){const out=[];const t=new Date();for(let i=0;i<n;i++){const d=new Date(t);d.setDate(t.getDate()-i);out.push(d.toISOString().slice(0,10))}return out}
 function localDay(d){const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)}
@@ -130,18 +130,18 @@ function draw(){
     const rows=[];for(const [day,items] of Object.entries(D.days||{})){if(!want.has(day))continue;for(const it of items){if(it.section===key&&match(it))rows.push({...it,day})}}
     rows.sort((a,b)=>b.day.localeCompare(a.day));
     if(!rows.length)return "";
-    return `<details ${key==="flag"||key==="spotlight"||q?"open":""}><summary>${esc(D.headings[key]||key)}<span class="count">${rows.length}</span></summary><div class="body">`+
+    return `<details id="${key}" ${key==="flag"||key==="spotlight"||q||openKey===key?"open":""}><summary>${esc(D.headings[key]||key)}<span class="count">${rows.length}</span></summary><div class="body">`+
       rows.map(it=>`<div class="item">${it.flags&&it.flags.length?`<div class="flag">🚩 ${esc(it.flags.join(", "))}</div>`:""}<a href="${esc(it.url)}">${esc(it.title)}</a><div class="meta">${esc(it.source)} · ${esc(it.when||it.day)}</div>${it.snippet&&it.flags&&it.flags.length?`<div class="snip">${esc(it.snippet)}</div>`:""}</div>`).join("")+
       `</div></details>`};
   // 1. Spotlight always first
   const sp=section("spotlight");
-  h+=sp||`<div class="card"><b>${esc(D.headings.spotlight||"Spotlight")}</b><div class="empty">Nothing new in this range.</div></div>`;
+  h+=sp||`<div class="card" id="spotlight"><b>${esc(D.headings.spotlight||"Spotlight")}</b><div class="empty">Nothing new in this range.</div></div>`;
   // 2. Key points, 3. Weather
   const L=D.latest||{};
   if(L.key_points&&L.key_points.length&&!q){h+=`<div class="card"><b>Key points</b> <span class="meta">(${esc(L.date)})</span>`+
     L.key_points.map(([ic,t,u])=>`<div class="item">${ic} ${u?`<a href="${esc(u)}">${esc(t)}</a>`:esc(t)}</div>`).join("")+`</div>`}
   const W=L.weather;
-  if(W&&W.days&&W.days.length&&!q){h+=`<div class="card"><b>🌤️ Weather${W.label?" — "+esc(W.label):""}</b>`+
+  if(W&&W.days&&W.days.length&&!q){h+=`<div class="card" id="weather"><b>🌤️ Weather${W.label?" — "+esc(W.label):""}</b>`+
     (W.alerts||[]).map(a=>`<div class="flag">⚠️ ${esc(a.event)}</div>`).join("")+
     `<div class="wx" style="margin-top:6px">`+W.days.map(d=>{const m=d.day||d.night;return `<div><b>${esc(d.name)}</b><span class="big">${d.day?d.day.temp+"°":"—"} / ${d.night?d.night.temp+"°":"—"}</span><br>${esc(m.text)}</div>`}).join("")+`</div></div>`}
   // 4. News → meetings/legal → preparedness → recalls → police
@@ -150,7 +150,7 @@ function draw(){
   const cut=new Date(Date.now()-(range===1?24:range*24)*3600e3);
   const calls=(D.dispatch||[]).filter(c=>{const t=new Date(c.time.replace(" ","T"));return t>=cut&&!(D.hidden_911||[]).includes(c.category)&&(!q||(c.type+" "+c.location).toLowerCase().includes(q))});
   const cats=["Police","Fire","EMS","Other"],icon={"Police":"🚓","Fire":"🚒","EMS":"🚑","Other":"📟"};
-  h+=`<details ${q&&calls.length?"open":""}><summary>🚨 911 calls ${range===1?"(last 24 hrs)":"(last "+range+" days)"}<span class="count">${calls.length}</span></summary><div class="body sub">`;
+  h+=`<details id="dispatch" ${(q&&calls.length)||openKey==="dispatch"?"open":""}><summary>🚨 911 calls ${range===1?"(last 24 hrs)":"(last "+range+" days)"}<span class="count">${calls.length}</span></summary><div class="body sub">`;
   for(const c of cats){const cs=calls.filter(x=>x.category===c);if(!cs.length)continue;
     h+=`<details><summary>${icon[c]} ${c}<span class="count">${cs.length}</span></summary><div class="body">`+
     cs.map(x=>`<div class="item"><span class="meta">${esc(x.time.slice(5,16))}</span> ${x.map?`<a href="${esc(x.map)}">`:""}${esc(x.type)} — ${esc(x.location)}${x.map?"</a>":""}${x.station?`<div class="meta">${esc(x.station)}</div>`:""}</div>`).join("")+`</div></details>`}
@@ -158,6 +158,7 @@ function draw(){
   h+=`</div></details>`;
   h+=`<p class="sub" style="margin-top:18px"><a href="#" id="lockout">Lock this device</a></p>`;
   app.innerHTML=h;
+  if(openKey){const el=document.getElementById(openKey);if(el)setTimeout(()=>el.scrollIntoView({block:"start"}),50);openKey=""}
   app.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{range=+b.dataset.r;draw()});
   const qi=document.getElementById("q");qi.oninput=()=>{q=qi.value.trim().toLowerCase();const pos=qi.selectionStart;draw();const n=document.getElementById("q");n.focus();n.setSelectionRange(pos,pos)};
   document.getElementById("lockout").onclick=e=>{e.preventDefault();store.del();location.reload()};
