@@ -8,7 +8,7 @@ on:
   workflow_dispatch: {}   # "Run workflow" button for testing
 
 permissions:
-  contents: write
+  contents: write         # lets the job save seen.json back to the repo
 
 concurrency: daily-brief
 
@@ -41,8 +41,47 @@ jobs:
           git config user.email "41898699+github-actions[bot]@users.noreply.github.com"
           if [ -f seen.json.enc ]; then
             git add seen.json.enc
+            [ -f history.json.enc ] && git add history.json.enc
             if ! git diff --cached --quiet; then
               git commit -m "Update state"
               for i in 1 2 3; do git pull --rebase -q && git push -q && break; sleep 5; done
             fi
           fi
+
+  publish:
+    # Rebuilds the encrypted dashboard and deploys it to GitHub Pages.
+    needs: brief
+    if: success()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main   # pick up the data just saved by the previous job
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install cryptography
+
+      - name: Build dashboard
+        run: python dashboard.py
+        env:
+          BRIEF_CONFIG: ${{ secrets.BRIEF_CONFIG }}
+          STATE_KEY: ${{ secrets.STATE_KEY }}
+          DASH_PASSWORD: ${{ secrets.DASH_PASSWORD }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - uses: actions/deploy-pages@v4
