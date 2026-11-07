@@ -2,7 +2,7 @@ name: Dispatch Poller
 
 on:
   schedule:
-    - cron: "*/15 * * * *"   # every 15 minutes (GitHub may run some a few minutes late)
+    - cron: "4-59/15 * * * *"   # every 15 min at :04 :19 :34 :49 (off-peak; GitHub drops more runs at :00/:15/:30/:45)
   workflow_dispatch: {}
 
 permissions:
