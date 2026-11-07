@@ -37,7 +37,7 @@ except ImportError:  # PDF scanning is optional
 # SETTINGS — edit these freely
 # ---------------------------------------------------------------------------
 TZ = ZoneInfo("America/New_York")
-SEND_WINDOW_HOURS = (7, 9)      # scheduled runs only send between 7:00 and 9:59 AM ET
+SEND_WINDOW_HOURS = (7, 23)     # scheduled runs send once a day, any time after 7:00 AM ET
 STATE_FILE = "seen.json"
 NEWS_MAX_AGE_HOURS = 36         # ignore news older than this
 NEWS_SEEN_KEEP_DAYS = 30        # how long to remember news headlines
