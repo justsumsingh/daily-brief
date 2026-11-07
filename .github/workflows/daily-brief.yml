@@ -2,9 +2,10 @@ name: Daily Brief
 
 on:
   schedule:
-    # GitHub cron is UTC. Two times cover both EST and EDT; the script only
-    # sends during the 7 AM ET window and never twice in one day.
-    - cron: "7 11,12 * * *"
+    # GitHub cron is UTC and GitHub sometimes delays or drops scheduled runs,
+    # so this tries hourly from ~7 AM ET (EST and EDT). The script sends only
+    # once per day, after 7 AM ET; the extra runs just check and exit.
+    - cron: "7 11-16 * * *"
   workflow_dispatch: {}   # "Run workflow" button for testing
 
 permissions:
